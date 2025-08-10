@@ -44,9 +44,9 @@
   </style>
 </head>
 <body>
-  <div class="app" role="application" aria-label="Wordle with NYT lists and Custom Word">
-    <h1>Leon's Wordle</h1>
-    <p class="lead">Use the "Custom Word" button to create a shareable link for a word you pick!</p>
+  <div class="app" role="application" aria-label="Leon's Wordle">
+    <h1>Wordle — NYT lists + Custom Word (any 5 letters allowed)</h1>
+    <p class="lead">Use the "Custom Word" button to create a shareable link for any 5-letter word!</p>
 
     <div id="board" class="board" aria-live="polite"></div>
     <div id="status" class="status" aria-atomic="true">Loading word lists...</div>
@@ -147,22 +147,25 @@ async function loadLists(){
   }
 }
 
-// Get custom word from URL hash if any: #custom=word
 function getCustomWordFromHash(){
   const hash = window.location.hash.slice(1);
   if(!hash.startsWith("custom=")) return null;
   const word = decodeURIComponent(hash.slice(7)).toLowerCase();
   if(word.length !== 5) return null;
-  if(!VALID.has(word)) return null;
+  if(!/^[a-z]{5}$/.test(word)) return null; // Only letters allowed
   return word;
 }
 
 function pickSolution(){
-  // If custom word present, use it
   const custom = getCustomWordFromHash();
   if(custom){
     solution = custom;
-    statusEl.textContent = `Playing custom word: ${solution.toUpperCase()}`;
+    if(!VALID.has(solution)){
+      VALID.add(solution);  // Add custom word to VALID guesses so you can guess it!
+      statusEl.textContent = `Playing custom word: ${solution.toUpperCase()} (not in dictionary)`;
+    } else {
+      statusEl.textContent = `Playing custom word: ${solution.toUpperCase()}`;
+    }
   } else {
     solution = SOLUTIONS[Math.floor(Math.random()*SOLUTIONS.length)];
     statusEl.textContent = "Good luck — guess the 5-letter word!";
@@ -235,10 +238,8 @@ function revealGuess(guess){
         tile.classList.add('pop');
         tile.classList.add(cls);
 
-        // Update keyboard colors with priority: correct > present > absent
         const prev = keyStates[ch] || '';
         if(prev === 'correct'){
-          // keep green
         } else if(prev === 'present'){
           if(cls === 'correct') keyStates[ch] = 'correct';
         } else {
@@ -323,16 +324,15 @@ shareBtn.onclick = async ()=>{
 };
 
 customBtn.onclick = ()=>{
-  const input = prompt("Enter your custom 5-letter word (must be valid):").toLowerCase().trim();
+  const input = prompt("Enter your custom 5-letter word (any letters):").toLowerCase().trim();
   if(input.length !== 5){
     alert("Word must be exactly 5 letters.");
     return;
   }
-  if(!VALID.has(input)){
-    alert("Word is not in the allowed word list.");
+  if(!/^[a-z]{5}$/.test(input)){
+    alert("Word must only contain letters a-z.");
     return;
   }
-  // Create a URL with #custom=word hash
   const url = `${window.location.origin}${window.location.pathname}#custom=${encodeURIComponent(input)}`;
   prompt("Share this link with others to play your custom Wordle:", url);
 };
