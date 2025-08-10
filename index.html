@@ -150,10 +150,15 @@ async function loadLists(){
 function getCustomWordFromHash(){
   const hash = window.location.hash.slice(1);
   if(!hash.startsWith("custom=")) return null;
-  const word = decodeURIComponent(hash.slice(7)).toLowerCase();
-  if(word.length !== 5) return null;
-  if(!/^[a-z]{5}$/.test(word)) return null; // Only letters allowed
-  return word;
+  const code = hash.slice(7);
+  try {
+    const word = atob(code).toLowerCase();
+    if(word.length !== 5) return null;
+    if(!/^[a-z]{5}$/.test(word)) return null; // Only letters allowed
+    return word;
+  } catch(e) {
+    return null;
+  }
 }
 
 function pickSolution(){
@@ -333,7 +338,8 @@ customBtn.onclick = ()=>{
     alert("Word must only contain letters a-z.");
     return;
   }
-  const url = `${window.location.origin}${window.location.pathname}#custom=${encodeURIComponent(input)}`;
+  const encoded = btoa(input); // encode in base64
+  const url = `${window.location.origin}${window.location.pathname}#custom=${encoded}`;
   prompt("Share this link with others to play your custom Wordle:", url);
 };
 
