@@ -357,7 +357,7 @@ window.addEventListener('keydown', (e)=>{
   buildBoard();
   buildKeyboard();
   await loadLists();
-  startNewGame();
+  startNewGame();  // This picks the solution, decoding custom word if any
 })();
 
 newBtn.onclick = startNewGame;
