@@ -9,7 +9,7 @@
       --bg:#0b1220; --tile:#111827; --text:#e6eef8; --muted:#9aa7bf;
       --green:#6aaa64; --yellow:#c9b458; --gray:#3a3a3c; --accent:#2563eb;
       --tile-size:64px;
-      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
     }
     *{box-sizing:border-box}
     body{margin:0; background:linear-gradient(180deg,#071020,#0b1220); color:var(--text);
@@ -31,7 +31,7 @@
     .keyboard{ margin-top:10px; display:flex; flex-direction:column; gap:8px; align-items:center; user-select:none; }
     .kb-row{ display:flex; gap:6px; }
     .key{ padding:10px 12px; min-width:42px; border-radius:6px; background:#0f1724; color:var(--text);
-      font-weight:700; cursor:pointer; text-transform:uppercase; transition: background .3s ease; text-align:center; }
+      font-weight:700; cursor:pointer; text-transform:uppercase; transition: background .3s ease; }
     .key.wide{ min-width:72px; }
     .key.absent{ background: var(--gray); color: white; }
     .key.present{ background: var(--yellow); color: white; }
@@ -40,18 +40,95 @@
     .controls{ margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
     button.btn{ background:var(--accent); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; }
     .small{ font-size:13px; color:var(--muted); margin-top:6px;}
-    /* Stats popup */
-    #statsPopup{ display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-      background:#0f1724; padding:18px; border-radius:10px; box-shadow:0 20px 40px rgba(0,0,0,0.6); z-index:1000; color:var(--text); width:320px; max-width:92vw; }
-    #statsPopup h2{ margin:0 0 8px 0; font-size:18px; }
-    .stat-row{ display:flex; justify-content:space-between; margin:6px 0; color:var(--muted); }
-    .dist-bar{ height:20px; background:#111827; border-radius:6px; overflow:hidden; display:flex; align-items:center; }
-    .dist-fill{ height:100%; background:var(--accent); min-width:4px; display:block; }
-    .dist-label{ width:32px; text-align:left; padding-right:8px; font-weight:700; color:var(--text); }
-    .popup-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-    /* overlay */
-    #overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:900; }
-    @media (max-width:520px){ :root{ --tile-size:48px } .key{ padding:8px 10px } .controls{justify-content:center} #statsPopup{ width:92vw } }
+    @media (max-width:520px){ :root{ --tile-size:48px } .key{ padding:8px 10px } .controls{justify-content:center} }
+
+    /* Modal Styles */
+    #statsModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    #statsModal.active {
+      display: flex;
+    }
+    #statsContent {
+      background: var(--tile);
+      border-radius: 12px;
+      padding: 20px 30px;
+      max-width: 400px;
+      width: 90%;
+      color: var(--text);
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+      font-weight: 600;
+    }
+    #statsContent h2 {
+      margin-top: 0;
+      text-align: center;
+      font-weight: 700;
+    }
+    #statsContent button.closeBtn {
+      display: block;
+      margin: 10px auto 0;
+      padding: 8px 20px;
+      font-weight: 700;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    .distribution-bar {
+      margin: 12px 0;
+    }
+    .dist-bar-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .dist-label {
+      width: 24px;
+      font-weight: 700;
+    }
+    .dist-bar {
+      flex-grow: 1;
+      background: var(--gray);
+      height: 20px;
+      border-radius: 10px;
+      margin-left: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .dist-bar-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 10px 0 0 10px;
+      text-align: right;
+      color: white;
+      font-weight: 700;
+      padding-right: 6px;
+      box-sizing: border-box;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .favorite-word {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--yellow);
+    }
   </style>
 </head>
 <body>
@@ -72,25 +149,30 @@
     <p class="small">If fetching the full lists fails (offline), the game will still run with a small fallback list.</p>
   </div>
 
-  <!-- Overlay + Stats Popup -->
-  <div id="overlay" onclick="closeStats()"></div>
-  <div id="statsPopup" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
-    <h2 id="statsTitle">Statistics</h2>
-    <div class="stat-row"><div>Games Played</div><div id="statGames">0</div></div>
-    <div class="stat-row"><div>Win %</div><div id="statWins">0%</div></div>
-    <div class="stat-row"><div>Current Streak</div><div id="statCurrent">0</div></div>
-    <div class="stat-row"><div>Best Streak</div><div id="statBest">0</div></div>
+  <div id="statsModal" role="dialog" aria-modal="true" aria-labelledby="statsTitle" tabindex="-1">
+    <div id="statsContent">
+      <h2 id="statsTitle">Statistics</h2>
+      <div class="stat-row"><div>Games Played:</div><div id="statPlayed">0</div></div>
+      <div class="stat-row"><div>Wins:</div><div id="statWins">0</div></div>
+      <div class="stat-row"><div>Losses:</div><div id="statLosses">0</div></div>
+      <div class="stat-row"><div>Win %:</div><div id="statWinPercent">0%</div></div>
+      <div class="stat-row"><div>Loss %:</div><div id="statLossPercent">0%</div></div>
 
-    <h3 style="margin-top:12px; margin-bottom:8px; font-size:14px; color:var(--muted)">Guess Distribution</h3>
-    <div id="distList" style="display:flex; flex-direction:column; gap:6px;"></div>
+      <div class="distribution-bar">
+        <div><strong>Guess Distribution</strong></div>
+        <div id="distBars"></div>
+      </div>
 
-    <div class="popup-actions">
-      <button id="closeStatsBtn" class="btn">Close</button>
+      <div class="favorite-word" id="favWordContainer">
+        <div><strong>Favorite Word:</strong></div>
+        <div id="favWord" style="margin-top:6px;">-</div>
+      </div>
+
+      <button class="closeBtn" aria-label="Close statistics popup">Close</button>
     </div>
   </div>
 
 <script>
-/* ========= Game constants and DOM refs ========= */
 const ROWS = 6, COLS = 5;
 const boardEl = document.getElementById('board');
 const keyboardEl = document.getElementById('keyboard');
@@ -100,10 +182,15 @@ const shareBtn = document.getElementById('shareBtn');
 const customBtn = document.getElementById('customBtn');
 const statsBtn = document.getElementById('statsBtn');
 
-const overlay = document.getElementById('overlay');
-const statsPopup = document.getElementById('statsPopup');
-const distList = document.getElementById('distList');
-const closeStatsBtn = document.getElementById('closeStatsBtn');
+const statsModal = document.getElementById('statsModal');
+const closeStatsBtn = statsModal.querySelector('.closeBtn');
+const statPlayedEl = document.getElementById('statPlayed');
+const statWinsEl = document.getElementById('statWins');
+const statLossesEl = document.getElementById('statLosses');
+const statWinPercentEl = document.getElementById('statWinPercent');
+const statLossPercentEl = document.getElementById('statLossPercent');
+const distBarsEl = document.getElementById('distBars');
+const favWordEl = document.getElementById('favWord');
 
 let grid = [];
 let curRow = 0, curCol = 0;
@@ -113,59 +200,40 @@ let keyStates = {};
 let SOLUTIONS = [];
 let VALID = new Set();
 
-/* Fallback small lists if fetch fails */
 const FALLBACK_SOLUTIONS = ["apple","baker","cigar","delta","eagle","flame","grace","hotel","image","jelly"];
 const FALLBACK_VALID = new Set([...FALLBACK_SOLUTIONS, "about","other","which","their","there","could","would","these","think","place","under","right","first","still"]);
 
-/* Gist raw URLs */
 const GIST_ANSWERS_RAW = "https://gist.githubusercontent.com/cfreshman/a03ef2cba789d8cf00c08f767e0fad7b/raw/wordle-answers-alphabetical.txt";
 const GIST_ALLOWED_RAW  = "https://gist.githubusercontent.com/cfreshman/cdcdf777450c5b5301e439061d29694c/raw/wordle-allowed-guesses.txt";
 
-/* ========= Stats handling (localStorage) ========= */
+// --- Statistics object ---
 let stats = {
   gamesPlayed: 0,
   gamesWon: 0,
-  currentStreak: 0,
-  bestStreak: 0,
-  guessDist: [0,0,0,0,0,0] // index 0 = win in 1 guess, index 5 = win in 6 guesses
+  gamesLost: 0,
+  guessDist: [0,0,0,0,0,0], // counts of wins on guess 1..6
+  guessesMade: {}, // {word: count}
 };
 
-function loadStats(){
-  try {
-    const saved = localStorage.getItem("leon_wordle_stats");
-    if(saved){
-      const parsed = JSON.parse(saved);
-      // Basic validation
-      if(parsed && typeof parsed === 'object' && Array.isArray(parsed.guessDist) && parsed.guessDist.length===6){
-        stats = parsed;
-      }
-    }
-  } catch(e){
-    console.warn("Failed to load stats:", e);
-  }
-}
-
 function saveStats(){
-  try {
-    localStorage.setItem("leon_wordle_stats", JSON.stringify(stats));
-  } catch(e){
-    console.warn("Failed to save stats:", e);
+  localStorage.setItem('leonWordleStats', JSON.stringify(stats));
+}
+
+function loadStats(){
+  const saved = localStorage.getItem('leonWordleStats');
+  if(saved){
+    try {
+      stats = JSON.parse(saved);
+      // Fix missing fields if old data
+      stats.gamesPlayed = stats.gamesPlayed||0;
+      stats.gamesWon = stats.gamesWon||0;
+      stats.gamesLost = stats.gamesLost||0;
+      stats.guessDist = stats.guessDist || [0,0,0,0,0,0];
+      stats.guessesMade = stats.guessesMade || {};
+    } catch(e){}
   }
 }
 
-function resetStats(){
-  stats = {
-    gamesPlayed: 0,
-    gamesWon: 0,
-    currentStreak: 0,
-    bestStreak: 0,
-    guessDist: [0,0,0,0,0,0]
-  };
-  saveStats();
-  updateStatsUI();
-}
-
-/* ========= UI Builders ========= */
 function buildBoard(){
   boardEl.innerHTML = "";
   grid = [];
@@ -202,16 +270,6 @@ function buildKeyboard(){
   });
 }
 
-function updateKeyboardUI(){
-  const keys = keyboardEl.querySelectorAll('.key');
-  keys.forEach(k=>{
-    const ch = (k.dataset.key || '').toLowerCase();
-    k.classList.remove('absent','present','correct');
-    if(ch && keyStates[ch]) k.classList.add(keyStates[ch]);
-  });
-}
-
-/* ========= Word lists loading ========= */
 async function loadLists(){
   statusEl.textContent = "Fetching Wordle lists...";
   try{
@@ -240,7 +298,6 @@ async function loadLists(){
   }
 }
 
-/* ========= Custom word from hash ========= */
 function getCustomWordFromHash(){
   const hash = window.location.hash.slice(1);
   if(!hash.startsWith("custom=")) return null;
@@ -255,16 +312,14 @@ function getCustomWordFromHash(){
   }
 }
 
-/* ========= Game flow ========= */
 function pickSolution(){
   const custom = getCustomWordFromHash();
   if(custom){
     solution = custom;
-    // Do NOT show the solution to user to avoid cheating
-    statusEl.textContent = "Good luck — guess the 5-letter word!";
     if(!VALID.has(solution)){
       VALID.add(solution);  // Add custom word to VALID guesses so you can guess it!
     }
+    statusEl.textContent = "Good luck — guess the 5-letter word!";
   } else {
     if(SOLUTIONS.length === 0){
       solution = FALLBACK_SOLUTIONS[Math.floor(Math.random()*FALLBACK_SOLUTIONS.length)];
@@ -306,12 +361,10 @@ function getGuess(){
   return s;
 }
 
-/* Reveal and mark tiles. This handles repeated letters correctly. */
 function revealGuess(guess){
   const solArr = solution.split('');
   const state = Array(COLS).fill('absent');
 
-  // First pass: correct
   for(let i=0;i<COLS;i++){
     if(guess[i] === solArr[i]){
       state[i] = 'correct';
@@ -319,14 +372,12 @@ function revealGuess(guess){
     }
   }
 
-  // Count remaining letters in solution
   const counts = {};
   for(const ch of solArr){
     if(!ch) continue;
     counts[ch] = (counts[ch]||0)+1;
   }
 
-  // Second pass: present or absent
   for(let i=0;i<COLS;i++){
     if(state[i] === 'correct') continue;
     const g = guess[i];
@@ -338,7 +389,6 @@ function revealGuess(guess){
     }
   }
 
-  // Animate and update keyboard states
   for(let i=0;i<COLS;i++){
     const tile = grid[curRow][i];
     ((tile, cls, ch, idx)=>{
@@ -348,7 +398,6 @@ function revealGuess(guess){
 
         const prev = keyStates[ch] || '';
         if(prev === 'correct'){
-          // keep correct
         } else if(prev === 'present'){
           if(cls === 'correct') keyStates[ch] = 'correct';
         } else {
@@ -362,7 +411,15 @@ function revealGuess(guess){
   return state;
 }
 
-/* ========= Handle keys and game end (update stats here) ========= */
+function updateKeyboardUI(){
+  const keys = keyboardEl.querySelectorAll('.key');
+  keys.forEach(k=>{
+    const ch = (k.dataset.key || '').toLowerCase();
+    k.classList.remove('absent','present','correct');
+    if(ch && keyStates[ch]) k.classList.add(keyStates[ch]);
+  });
+}
+
 function showMessage(msg, timeout=2200){
   statusEl.textContent = msg;
   if(timeout>0) setTimeout(()=>{ if(statusEl.textContent===msg) statusEl.textContent = ""; }, timeout);
@@ -371,34 +428,41 @@ function showMessage(msg, timeout=2200){
 function handleKey(key){
   if(finished) return;
   if(key === 'Enter'){
-    if(curCol < COLS){ showMessage("Not enough letters"); return; }
+    if(curCol < COLS){
+      showMessage("Not enough letters");
+      return;
+    }
     const guess = getGuess();
     if(!VALID.has(guess)){
       showMessage("Not in word list");
       return;
     }
-    const state = revealGuess(guess);
-    curRow++;
-    curCol = 0;
+    const result = revealGuess(guess);
+
+    // Track guesses for favorite word:
+    stats.guessesMade[guess] = (stats.guessesMade[guess]||0) + 1;
 
     if(guess === solution){
       finished = true;
       stats.gamesPlayed++;
       stats.gamesWon++;
-      stats.currentStreak++;
-      if(stats.currentStreak > stats.bestStreak) stats.bestStreak = stats.currentStreak;
-      stats.guessDist[curRow-1]++;
+      stats.guessDist[curRow] = (stats.guessDist[curRow]||0) + 1;
       saveStats();
-      showMessage(`You won in ${curRow} guess${curRow>1?'es':''}!`, 6000);
+
+      showMessage(`You won in ${curRow+1} guess${curRow+1 > 1 ? 'es' : ''}! The word was ${solution.toUpperCase()}`, 6000);
       return;
     }
+
+    curRow++;
+    curCol = 0;
 
     if(curRow >= ROWS){
       finished = true;
       stats.gamesPlayed++;
-      stats.currentStreak = 0;
+      stats.gamesLost++;
       saveStats();
-      showMessage(`Game over! Word was ${solution.toUpperCase()}`, 6000);
+
+      showMessage(`Out of tries — the word was ${solution.toUpperCase()}`, 6000);
       return;
     }
     showMessage("Good guess!");
@@ -409,104 +473,148 @@ function handleKey(key){
   }
 }
 
-/* ========= Share and custom word logic ========= */
-function shareResults(){
-  if(!finished){
-    showMessage("Finish the game first!");
-    return;
-  }
-  let text = `Leon’s Wordle\n`;
-  text += `Word: ${solution.toUpperCase()}\n`;
-  text += `Guesses: ${curRow}\n\n`;
-  text += "Results:\n";
-  for(let r=0; r<curRow; r++){
-    for(let c=0; c<COLS; c++){
-      const tile = grid[r][c];
-      if(tile.classList.contains('correct')) text += "🟩";
-      else if(tile.classList.contains('present')) text += "🟨";
-      else text += "⬛";
+function makeShareText(){
+  let rowsText = [];
+  const tiles = boardEl.querySelectorAll('.tile');
+  for(let r=0;r<ROWS;r++){
+    let rowState = ""; let rowHasAny=false;
+    for(let c=0;c<COLS;c++){
+      const t = tiles[r*COLS + c]; const ch = (t.textContent||"").trim();
+      if(!ch){ rowState += '⬜'; continue; }
+      rowHasAny = true;
+      if(t.classList.contains('correct')) rowState += '🟩';
+      else if(t.classList.contains('present')) rowState += '🟨';
+      else if(t.classList.contains('absent')) rowState += '⬛';
+      else rowState += '⬜';
     }
-    text += "\n";
+    if(rowHasAny) rowsText.push(rowState);
   }
-  navigator.clipboard.writeText(text).then(() => {
-    showMessage("Copied results to clipboard!", 3000);
-  }).catch(() => {
-    showMessage("Failed to copy.");
-  });
+  const title = `Leon’s Wordle — ${finished ? (statusEl.textContent.startsWith('You won') ? 'Solved' : 'Failed') : 'Play'}`;
+  return `${title}\n${rowsText.join('\n')}\n(Guess the word!)`;
 }
 
-function promptCustomWord(){
-  let w = prompt("Enter a 5-letter word (letters only):");
-  if(!w) return;
-  w = w.toLowerCase().trim();
-  if(w.length !== 5 || !/^[a-z]{5}$/.test(w)){
-    alert("Invalid word. Must be 5 letters and only a-z.");
+shareBtn.onclick = async ()=>{
+  try{
+    await navigator.clipboard.writeText(makeShareText());
+    showMessage("Result copied to clipboard!");
+  }catch(e){
+    showMessage("Copy failed — try manually.");
+  }
+};
+
+customBtn.onclick = ()=>{
+  const input = prompt("Enter your custom 5-letter word (any letters):");
+  if(!input) return;
+  const word = input.toLowerCase().trim();
+  if(word.length !== 5){
+    alert("Word must be exactly 5 letters.");
     return;
   }
-  // Create custom link
-  const code = btoa(w);
-  const url = `${window.location.origin}${window.location.pathname}#custom=${code}`;
-  prompt("Share this link to play your custom word:", url);
-}
+  if(!/^[a-z]{5}$/.test(word)){
+    alert("Word must only contain letters a-z.");
+    return;
+  }
+  const encoded = btoa(word); // encode in base64
+  const url = `${window.location.origin}${window.location.pathname}#custom=${encoded}`;
+  prompt("Share this link with others to play your custom Wordle:", url);
+};
 
-/* ========= Stats UI ========= */
-function updateStatsUI(){
-  document.getElementById('statGames').textContent = stats.gamesPlayed;
-  document.getElementById('statWins').textContent = (stats.gamesPlayed===0)? "0%" : Math.round(stats.gamesWon*100/stats.gamesPlayed)+"%";
-  document.getElementById('statCurrent').textContent = stats.currentStreak;
-  document.getElementById('statBest').textContent = stats.bestStreak;
+// --- Stats Popup Logic ---
 
-  distList.innerHTML = "";
-  const max = Math.max(...stats.guessDist, 1);
-  stats.guessDist.forEach((count,i)=>{
-    const row = document.createElement('div'); row.style.display = 'flex'; row.style.alignItems = 'center'; row.style.gap = '6px';
+function openStatsPopup(){
+  loadStats();
+  // Calculate win/loss percent
+  const played = stats.gamesPlayed || 0;
+  const wins = stats.gamesWon || 0;
+  const losses = stats.gamesLost || 0;
+  const winPercent = played ? Math.round(wins*100/played) : 0;
+  const lossPercent = played ? Math.round(losses*100/played) : 0;
 
-    const label = document.createElement('div'); label.className='dist-label'; label.textContent = (i+1);
-    const barBg = document.createElement('div'); barBg.className = 'dist-bar'; barBg.style.flex = '1';
+  statPlayedEl.textContent = played;
+  statWinsEl.textContent = wins;
+  statLossesEl.textContent = losses;
+  statWinPercentEl.textContent = winPercent + '%';
+  statLossPercentEl.textContent = lossPercent + '%';
 
-    const barFill = document.createElement('div'); barFill.className = 'dist-fill';
-    const widthPercent = (count/max)*100;
-    barFill.style.width = widthPercent + '%';
-    barFill.textContent = count > 0 ? count : '';
+  // Distribution bars
+  distBarsEl.innerHTML = '';
+  const maxCount = Math.max(...stats.guessDist,1);
+  for(let i=0; i<6; i++){
+    const count = stats.guessDist[i] || 0;
+    const percent = Math.round((count/maxCount)*100);
+    const row = document.createElement('div');
+    row.className = 'dist-bar-row';
 
-    barBg.appendChild(barFill);
+    const label = document.createElement('div');
+    label.className = 'dist-label';
+    label.textContent = (i+1);
+
+    const bar = document.createElement('div');
+    bar.className = 'dist-bar';
+
+    const fill = document.createElement('div');
+    fill.className = 'dist-bar-fill';
+    fill.style.width = percent + '%';
+    fill.textContent = count || '';
+
+    bar.appendChild(fill);
     row.appendChild(label);
-    row.appendChild(barBg);
-    distList.appendChild(row);
-  });
+    row.appendChild(bar);
+    distBarsEl.appendChild(row);
+  }
+
+  // Favorite word (most guessed)
+  let favWord = '-';
+  let maxCountWord = 0;
+  for(const [word, count] of Object.entries(stats.guessesMade)){
+    if(count > maxCountWord) {
+      maxCountWord = count;
+      favWord = word.toUpperCase();
+    }
+  }
+  favWordEl.textContent = favWord;
+
+  statsModal.classList.add('active');
+  statsModal.focus();
 }
 
-function showStats(){
-  updateStatsUI();
-  overlay.style.display = 'block';
-  statsPopup.style.display = 'block';
+function closeStatsPopup(){
+  statsModal.classList.remove('active');
 }
 
-function closeStats(){
-  overlay.style.display = 'none';
-  statsPopup.style.display = 'none';
-}
+statsBtn.onclick = openStatsPopup;
+closeStatsBtn.onclick = closeStatsPopup;
 
-/* ========= Event Listeners ========= */
-window.addEventListener('keydown', e=>{
-  if(e.ctrlKey || e.metaKey || e.altKey) return;
-  if(finished && e.key !== 'Enter') return;
-  handleKey(e.key);
+statsModal.addEventListener('click', e=>{
+  if(e.target === statsModal) closeStatsPopup();
 });
+
+window.addEventListener('keydown', e=>{
+  if(e.key === 'Escape' && statsModal.classList.contains('active')){
+    closeStatsPopup();
+  }
+});
+
+// Initialize
+(async ()=>{
+  buildBoard();
+  buildKeyboard();
+  await loadLists();
+  loadStats();
+  startNewGame();
+})();
 
 newBtn.onclick = startNewGame;
-shareBtn.onclick = shareResults;
-customBtn.onclick = promptCustomWord;
-statsBtn.onclick = showStats;
-closeStatsBtn.onclick = closeStats;
-overlay.onclick = closeStats;
 
-/* ========= Initialize ========= */
-loadStats();
-loadLists().then(() => {
-  startNewGame();
+window.addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' || e.key === 'Backspace'){
+    handleKey(e.key);
+    e.preventDefault();
+    return;
+  }
+  const k = e.key.toLowerCase();
+  if(k.length===1 && k>='a' && k<='z') handleKey(k);
 });
-
 </script>
 </body>
 </html>
