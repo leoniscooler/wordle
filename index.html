@@ -14,8 +14,17 @@
     *{box-sizing:border-box}
     body{margin:0; background:linear-gradient(180deg,#071020,#0b1220); color:var(--text);
       display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px;}
-    .app{ width: min(760px, 96vw); text-align:center; }
-    h1{margin:0 0 6px 0; font-size:22px}
+    .app{ width: min(760px, 96vw); text-align:center; position: relative;}
+    h1{margin:0 0 6px 0; font-size:22px; display: flex; justify-content: center; align-items: center; gap: 12px;}
+    .timer {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      font-family: monospace;
+      user-select: none;
+      min-width: 56px;
+      text-align: right;
+    }
     p.lead{color:var(--muted); margin:4px 0 12px 0}
     .board{display:grid; grid-template-rows: repeat(6, var(--tile-size)); gap:8px; justify-content:center; margin:18px 0;}
     .row{ display:grid; grid-template-columns: repeat(5, var(--tile-size)); gap:8px; }
@@ -40,100 +49,46 @@
     .controls{ margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
     button.btn{ background:var(--accent); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; }
     .small{ font-size:13px; color:var(--muted); margin-top:6px;}
-    @media (max-width:520px){ :root{ --tile-size:48px } .key{ padding:8px 10px } .controls{justify-content:center} }
-
-    /* Modal Styles */
+    /* Stats modal styles */
     #statsModal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.75);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: var(--tile); color: var(--text);
+      border-radius: 12px; padding: 20px; width: 320px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      display: none; flex-direction: column; max-height: 90vh;
+      overflow-y: auto;
+      z-index: 1000;
     }
-    #statsModal.active {
-      display: flex;
+    #statsModal.active { display: flex; }
+    #statsModal h2 { margin-top: 0; text-align: center; }
+    #statsModal .close-btn {
+      align-self: flex-end;
+      background: transparent; border: none; color: var(--muted);
+      font-size: 20px; cursor: pointer; font-weight: 700;
+      margin-bottom: 12px;
     }
-    #statsContent {
-      background: var(--tile);
-      border-radius: 12px;
-      padding: 20px 30px;
-      max-width: 400px;
-      width: 90%;
-      color: var(--text);
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-      font-weight: 600;
-    }
-    #statsContent h2 {
-      margin-top: 0;
-      text-align: center;
-      font-weight: 700;
-    }
-    #statsContent button.closeBtn {
-      display: block;
-      margin: 10px auto 0;
-      padding: 8px 20px;
-      font-weight: 700;
-      background: var(--accent);
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-
-    .stat-row {
-      display: flex;
-      justify-content: space-between;
-      margin: 8px 0;
-      font-size: 16px;
-    }
-    .distribution-bar {
-      margin: 12px 0;
-    }
-    .dist-bar-row {
-      display: flex;
-      align-items: center;
-      margin-bottom: 6px;
-    }
+    .stat-row { display: flex; justify-content: space-between; margin: 6px 0; }
+    .dist-bar-row { display: flex; align-items: center; margin: 6px 0; }
     .dist-label {
-      width: 24px;
-      font-weight: 700;
+      width: 20px; font-weight: 700; user-select: none; color: var(--muted);
     }
     .dist-bar {
-      flex-grow: 1;
-      background: var(--gray);
-      height: 20px;
-      border-radius: 10px;
-      margin-left: 8px;
+      flex-grow: 1; height: 16px; background: var(--gray); border-radius: 6px; margin-left: 8px; overflow: hidden;
       position: relative;
-      overflow: hidden;
     }
     .dist-bar-fill {
-      height: 100%;
-      background: var(--green);
-      border-radius: 10px 0 0 10px;
-      text-align: right;
-      color: white;
-      font-weight: 700;
-      padding-right: 6px;
-      box-sizing: border-box;
-      user-select: none;
-      white-space: nowrap;
-    }
-
-    .favorite-word {
-      margin-top: 10px;
-      text-align: center;
-      font-weight: 700;
-      font-size: 18px;
-      color: var(--yellow);
+      height: 100%; background: var(--green); color: #fff; text-align: right; font-size: 12px; font-weight: 700;
+      padding-right: 4px; line-height: 16px; border-radius: 6px 0 0 6px;
+      white-space: nowrap; user-select: none;
     }
   </style>
 </head>
 <body>
   <div class="app" role="application" aria-label="Leon’s Wordle">
-    <h1>Leon’s Wordle</h1>
+    <h1>
+      Leon’s Wordle
+      <span class="timer" id="timer">00:00</span>
+    </h1>
     <p class="lead">Use the "Custom Word" button to create a shareable link for any 5-letter word!</p>
 
     <div id="board" class="board" aria-live="polite"></div>
@@ -150,26 +105,19 @@
   </div>
 
   <div id="statsModal" role="dialog" aria-modal="true" aria-labelledby="statsTitle" tabindex="-1">
-    <div id="statsContent">
-      <h2 id="statsTitle">Statistics</h2>
-      <div class="stat-row"><div>Games Played:</div><div id="statPlayed">0</div></div>
-      <div class="stat-row"><div>Wins:</div><div id="statWins">0</div></div>
-      <div class="stat-row"><div>Losses:</div><div id="statLosses">0</div></div>
-      <div class="stat-row"><div>Win %:</div><div id="statWinPercent">0%</div></div>
-      <div class="stat-row"><div>Loss %:</div><div id="statLossPercent">0%</div></div>
-
-      <div class="distribution-bar">
-        <div><strong>Guess Distribution</strong></div>
-        <div id="distBars"></div>
-      </div>
-
-      <div class="favorite-word" id="favWordContainer">
-        <div><strong>Favorite Word:</strong></div>
-        <div id="favWord" style="margin-top:6px;">-</div>
-      </div>
-
-      <button class="closeBtn" aria-label="Close statistics popup">Close</button>
-    </div>
+    <button class="close-btn" id="closeStatsBtn" aria-label="Close statistics popup">×</button>
+    <h2 id="statsTitle">Statistics</h2>
+    <div class="stat-row"><div>Games Played:</div><div id="statPlayed">0</div></div>
+    <div class="stat-row"><div>Wins:</div><div id="statWins">0</div></div>
+    <div class="stat-row"><div>Losses:</div><div id="statLosses">0</div></div>
+    <div class="stat-row"><div>Win %:</div><div id="statWinPercent">0%</div></div>
+    <div class="stat-row"><div>Loss %:</div><div id="statLossPercent">0%</div></div>
+    <div class="stat-row"><div>Last Solve Time:</div><div id="statLastTime">-</div></div>
+    <div class="stat-row"><div>Best Solve Time:</div><div id="statBestTime">-</div></div>
+    <div class="stat-row"><div>Average Solve Time:</div><div id="statAvgTime">-</div></div>
+    <div style="margin-top:12px; font-weight:700; text-align:center;">Guess Distribution</div>
+    <div id="distBars"></div>
+    <div style="margin-top:12px; font-weight:700; text-align:center;" id="favWord">Favorite Word: -</div>
   </div>
 
 <script>
@@ -181,14 +129,17 @@ const newBtn = document.getElementById('newBtn');
 const shareBtn = document.getElementById('shareBtn');
 const customBtn = document.getElementById('customBtn');
 const statsBtn = document.getElementById('statsBtn');
-
 const statsModal = document.getElementById('statsModal');
-const closeStatsBtn = statsModal.querySelector('.closeBtn');
+const closeStatsBtn = document.getElementById('closeStatsBtn');
+
 const statPlayedEl = document.getElementById('statPlayed');
 const statWinsEl = document.getElementById('statWins');
 const statLossesEl = document.getElementById('statLosses');
 const statWinPercentEl = document.getElementById('statWinPercent');
 const statLossPercentEl = document.getElementById('statLossPercent');
+const statLastTime = document.getElementById('statLastTime');
+const statBestTime = document.getElementById('statBestTime');
+const statAvgTime = document.getElementById('statAvgTime');
 const distBarsEl = document.getElementById('distBars');
 const favWordEl = document.getElementById('favWord');
 
@@ -206,33 +157,21 @@ const FALLBACK_VALID = new Set([...FALLBACK_SOLUTIONS, "about","other","which","
 const GIST_ANSWERS_RAW = "https://gist.githubusercontent.com/cfreshman/a03ef2cba789d8cf00c08f767e0fad7b/raw/wordle-answers-alphabetical.txt";
 const GIST_ALLOWED_RAW  = "https://gist.githubusercontent.com/cfreshman/cdcdf777450c5b5301e439061d29694c/raw/wordle-allowed-guesses.txt";
 
-// --- Statistics object ---
+// Statistics data
 let stats = {
   gamesPlayed: 0,
   gamesWon: 0,
   gamesLost: 0,
-  guessDist: [0,0,0,0,0,0], // counts of wins on guess 1..6
-  guessesMade: {}, // {word: count}
+  guessDist: [0,0,0,0,0,0],
+  guessesMade: {}, // word -> count
+  lastSolveTime: null,
+  bestSolveTime: null,
+  solveTimes: []
 };
 
-function saveStats(){
-  localStorage.setItem('leonWordleStats', JSON.stringify(stats));
-}
-
-function loadStats(){
-  const saved = localStorage.getItem('leonWordleStats');
-  if(saved){
-    try {
-      stats = JSON.parse(saved);
-      // Fix missing fields if old data
-      stats.gamesPlayed = stats.gamesPlayed||0;
-      stats.gamesWon = stats.gamesWon||0;
-      stats.gamesLost = stats.gamesLost||0;
-      stats.guessDist = stats.guessDist || [0,0,0,0,0,0];
-      stats.guessesMade = stats.guessesMade || {};
-    } catch(e){}
-  }
-}
+let startTime = null;
+let timerInterval = null;
+const timerEl = document.getElementById('timer');
 
 function buildBoard(){
   boardEl.innerHTML = "";
@@ -318,14 +257,10 @@ function pickSolution(){
     solution = custom;
     if(!VALID.has(solution)){
       VALID.add(solution);  // Add custom word to VALID guesses so you can guess it!
+      // Do NOT show any message about the custom word to prevent cheating
     }
-    statusEl.textContent = "Good luck — guess the 5-letter word!";
   } else {
-    if(SOLUTIONS.length === 0){
-      solution = FALLBACK_SOLUTIONS[Math.floor(Math.random()*FALLBACK_SOLUTIONS.length)];
-    } else {
-      solution = SOLUTIONS[Math.floor(Math.random()*SOLUTIONS.length)];
-    }
+    solution = SOLUTIONS[Math.floor(Math.random()*SOLUTIONS.length)];
     statusEl.textContent = "Good luck — guess the 5-letter word!";
   }
   console.log("solution:", solution);
@@ -337,6 +272,8 @@ function startNewGame(){
   curRow = 0; curCol = 0; finished = false; keyStates = {};
   updateKeyboardUI();
   pickSolution();
+  resetTimer();
+  updateStatsDisplay();
 }
 
 function putLetter(ch){
@@ -425,52 +362,193 @@ function showMessage(msg, timeout=2200){
   if(timeout>0) setTimeout(()=>{ if(statusEl.textContent===msg) statusEl.textContent = ""; }, timeout);
 }
 
+// Timer functions
+function startTimer(){
+  if(startTime !== null) return; // already started
+  startTime = Date.now();
+  updateTimerDisplay();
+  timerInterval = setInterval(updateTimerDisplay, 1000);
+}
+
+function stopTimer(){
+  if(timerInterval){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function resetTimer(){
+  stopTimer();
+  startTime = null;
+  timerEl.textContent = "00:00";
+}
+
+function updateTimerDisplay(){
+  if(startTime === null) {
+    timerEl.textContent = "00:00";
+    return;
+  }
+  const diff = Date.now() - startTime;
+  const totalSeconds = Math.floor(diff/1000);
+  const mins = Math.floor(totalSeconds/60);
+  const secs = totalSeconds % 60;
+  timerEl.textContent = `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+}
+
+// Handle keys, with timer start on first letter typed
 function handleKey(key){
   if(finished) return;
   if(key === 'Enter'){
-    if(curCol < COLS){
-      showMessage("Not enough letters");
-      return;
-    }
+    if(curCol < COLS){ showMessage("Not enough letters"); return; }
     const guess = getGuess();
-    if(!VALID.has(guess)){
-      showMessage("Not in word list");
-      return;
-    }
+    if(!VALID.has(guess)){ showMessage("Not in word list"); return; }
     const result = revealGuess(guess);
-
-    // Track guesses for favorite word:
-    stats.guessesMade[guess] = (stats.guessesMade[guess]||0) + 1;
-
-    if(guess === solution){
-      finished = true;
-      stats.gamesPlayed++;
-      stats.gamesWon++;
-      stats.guessDist[curRow] = (stats.guessDist[curRow]||0) + 1;
-      saveStats();
-
-      showMessage(`You won in ${curRow+1} guess${curRow+1 > 1 ? 'es' : ''}! The word was ${solution.toUpperCase()}`, 6000);
-      return;
-    }
-
-    curRow++;
-    curCol = 0;
-
-    if(curRow >= ROWS){
-      finished = true;
-      stats.gamesPlayed++;
-      stats.gamesLost++;
-      saveStats();
-
-      showMessage(`Out of tries — the word was ${solution.toUpperCase()}`, 6000);
-      return;
-    }
-    showMessage("Good guess!");
-  } else if(key === 'Backspace'){
+    setTimeout(()=>{
+      if(result.every(r=>r==='correct')){
+        finished=true;
+        stopTimer();
+        updateStats(true);
+        statusEl.textContent = `You win! The word was "${solution.toUpperCase()}". Time: ${timerEl.textContent}`;
+        updateStatsDisplay();
+      } else {
+        curRow++; curCol=0;
+        if(curRow>=ROWS){
+          finished=true;
+          stopTimer();
+          updateStats(false);
+          statusEl.textContent = `Out of tries — the word was "${solution.toUpperCase()}".`;
+          updateStatsDisplay();
+        }
+      }
+    }, COLS*240 + 140);
+  } else if(key === 'Backspace' || key === 'Back'){
     popLetter();
-  } else if(key.length === 1 && /^[a-z]$/i.test(key)){
-    putLetter(key.toLowerCase());
+  } else {
+    const letter = (key||'').toLowerCase();
+    if(letter.length===1 && letter>='a' && letter<='z'){
+      putLetter(letter);
+      if(startTime === null) startTimer();
+    }
   }
+}
+
+// Update stats after a finished game
+function updateStats(won){
+  stats.gamesPlayed++;
+  if(won){
+    stats.gamesWon++;
+    const solveTimeSec = (Date.now() - startTime)/1000;
+    stats.lastSolveTime = solveTimeSec;
+    stats.solveTimes.push(solveTimeSec);
+    if(stats.bestSolveTime === null || solveTimeSec < stats.bestSolveTime){
+      stats.bestSolveTime = solveTimeSec;
+    }
+    // Increment guess distribution count (row number +1)
+    stats.guessDist[curRow]++;
+  } else {
+    stats.gamesLost++;
+  }
+
+  // Update favorite word count
+  let guess = getGuess();
+  if(stats.guessesMade[guess]){
+    stats.guessesMade[guess]++;
+  } else {
+    stats.guessesMade[guess] = 1;
+  }
+
+  saveStats();
+}
+
+function saveStats(){
+  try {
+    localStorage.setItem("leon_wordle_stats", JSON.stringify(stats));
+  } catch(e) {
+    console.warn("Failed to save stats:", e);
+  }
+}
+
+function loadStats(){
+  try {
+    const data = localStorage.getItem("leon_wordle_stats");
+    if(data){
+      stats = JSON.parse(data);
+      if(!stats.guessDist || stats.guessDist.length !== ROWS){
+        stats.guessDist = [0,0,0,0,0,0];
+      }
+      if(!stats.guessesMade){
+        stats.guessesMade = {};
+      }
+      if(!stats.solveTimes){
+        stats.solveTimes = [];
+      }
+    }
+  } catch(e) {
+    console.warn("Failed to load stats:", e);
+  }
+}
+
+function formatTime(seconds){
+  if(seconds === null || seconds === undefined) return "-";
+  const mins = Math.floor(seconds/60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2,'0')}`;
+}
+
+function updateStatsDisplay(){
+  statPlayedEl.textContent = stats.gamesPlayed;
+  statWinsEl.textContent = stats.gamesWon;
+  statLossesEl.textContent = stats.gamesLost;
+
+  let winPercent = stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed)*100) : 0;
+  let lossPercent = stats.gamesPlayed > 0 ? 100 - winPercent : 0;
+
+  statWinPercentEl.textContent = `${winPercent}%`;
+  statLossPercentEl.textContent = `${lossPercent}%`;
+
+  statLastTime.textContent = formatTime(stats.lastSolveTime);
+  statBestTime.textContent = formatTime(stats.bestSolveTime);
+
+  // Average time calc
+  if(stats.solveTimes.length > 0){
+    let avg = stats.solveTimes.reduce((a,b)=>a+b,0)/stats.solveTimes.length;
+    statAvgTime.textContent = formatTime(avg);
+  } else {
+    statAvgTime.textContent = "-";
+  }
+
+  // Update guess distribution bars
+  distBarsEl.innerHTML = "";
+  const maxCount = Math.max(...stats.guessDist,1);
+  stats.guessDist.forEach((count, i)=>{
+    const percent = Math.round((count/maxCount)*100);
+    const row = document.createElement('div');
+    row.className = 'dist-bar-row';
+    const label = document.createElement('div');
+    label.className = 'dist-label';
+    label.textContent = i+1;
+    const bar = document.createElement('div');
+    bar.className = 'dist-bar';
+    const fill = document.createElement('div');
+    fill.className = 'dist-bar-fill';
+    fill.style.width = percent + '%';
+    fill.textContent = count;
+    bar.appendChild(fill);
+    row.appendChild(label);
+    row.appendChild(bar);
+    distBarsEl.appendChild(row);
+  });
+
+  // Find favorite word (most entered)
+  let fav = "-";
+  let maxCountFav = 0;
+  for(const w in stats.guessesMade){
+    if(stats.guessesMade[w] > maxCountFav){
+      maxCountFav = stats.guessesMade[w];
+      fav = w.toUpperCase();
+    }
+  }
+  favWordEl.textContent = `Favorite Word: ${fav}`;
 }
 
 function makeShareText(){
@@ -489,7 +567,7 @@ function makeShareText(){
     }
     if(rowHasAny) rowsText.push(rowState);
   }
-  const title = `Leon’s Wordle — ${finished ? (statusEl.textContent.startsWith('You won') ? 'Solved' : 'Failed') : 'Play'}`;
+  const title = `Leon’s Wordle — ${finished ? (statusEl.textContent.startsWith('You win') ? 'Solved' : 'Failed') : 'Play'}`;
   return `${title}\n${rowsText.join('\n')}\n(Guess the word!)`;
 }
 
@@ -503,110 +581,41 @@ shareBtn.onclick = async ()=>{
 };
 
 customBtn.onclick = ()=>{
-  const input = prompt("Enter your custom 5-letter word (any letters):");
-  if(!input) return;
-  const word = input.toLowerCase().trim();
-  if(word.length !== 5){
+  const input = prompt("Enter your custom 5-letter word (any letters):").toLowerCase().trim();
+  if(input.length !== 5){
     alert("Word must be exactly 5 letters.");
     return;
   }
-  if(!/^[a-z]{5}$/.test(word)){
+  if(!/^[a-z]{5}$/.test(input)){
     alert("Word must only contain letters a-z.");
     return;
   }
-  const encoded = btoa(word); // encode in base64
+  const encoded = btoa(input); // encode in base64
   const url = `${window.location.origin}${window.location.pathname}#custom=${encoded}`;
   prompt("Share this link with others to play your custom Wordle:", url);
 };
 
-// --- Stats Popup Logic ---
-
-function openStatsPopup(){
-  loadStats();
-  // Calculate win/loss percent
-  const played = stats.gamesPlayed || 0;
-  const wins = stats.gamesWon || 0;
-  const losses = stats.gamesLost || 0;
-  const winPercent = played ? Math.round(wins*100/played) : 0;
-  const lossPercent = played ? Math.round(losses*100/played) : 0;
-
-  statPlayedEl.textContent = played;
-  statWinsEl.textContent = wins;
-  statLossesEl.textContent = losses;
-  statWinPercentEl.textContent = winPercent + '%';
-  statLossPercentEl.textContent = lossPercent + '%';
-
-  // Distribution bars
-  distBarsEl.innerHTML = '';
-  const maxCount = Math.max(...stats.guessDist,1);
-  for(let i=0; i<6; i++){
-    const count = stats.guessDist[i] || 0;
-    const percent = Math.round((count/maxCount)*100);
-    const row = document.createElement('div');
-    row.className = 'dist-bar-row';
-
-    const label = document.createElement('div');
-    label.className = 'dist-label';
-    label.textContent = (i+1);
-
-    const bar = document.createElement('div');
-    bar.className = 'dist-bar';
-
-    const fill = document.createElement('div');
-    fill.className = 'dist-bar-fill';
-    fill.style.width = percent + '%';
-    fill.textContent = count || '';
-
-    bar.appendChild(fill);
-    row.appendChild(label);
-    row.appendChild(bar);
-    distBarsEl.appendChild(row);
-  }
-
-  // Favorite word (most guessed)
-  let favWord = '-';
-  let maxCountWord = 0;
-  for(const [word, count] of Object.entries(stats.guessesMade)){
-    if(count > maxCountWord) {
-      maxCountWord = count;
-      favWord = word.toUpperCase();
-    }
-  }
-  favWordEl.textContent = favWord;
-
+statsBtn.onclick = ()=>{
+  updateStatsDisplay();
   statsModal.classList.add('active');
   statsModal.focus();
-}
+};
 
-function closeStatsPopup(){
+closeStatsBtn.onclick = ()=>{
   statsModal.classList.remove('active');
-}
-
-statsBtn.onclick = openStatsPopup;
-closeStatsBtn.onclick = closeStatsPopup;
-
-statsModal.addEventListener('click', e=>{
-  if(e.target === statsModal) closeStatsPopup();
-});
-
-window.addEventListener('keydown', e=>{
-  if(e.key === 'Escape' && statsModal.classList.contains('active')){
-    closeStatsPopup();
-  }
-});
-
-// Initialize
-(async ()=>{
-  buildBoard();
-  buildKeyboard();
-  await loadLists();
-  loadStats();
-  startNewGame();
-})();
-
-newBtn.onclick = startNewGame;
+};
 
 window.addEventListener('keydown', (e)=>{
+  if(statsModal.classList.contains('active')){
+    if(e.key === 'Escape'){
+      statsModal.classList.remove('active');
+      return;
+    }
+    // block keypresses while modal open
+    e.preventDefault();
+    return;
+  }
+
   if(e.key === 'Enter' || e.key === 'Backspace'){
     handleKey(e.key);
     e.preventDefault();
@@ -615,6 +624,17 @@ window.addEventListener('keydown', (e)=>{
   const k = e.key.toLowerCase();
   if(k.length===1 && k>='a' && k<='z') handleKey(k);
 });
+
+(async ()=>{
+  loadStats();
+  buildBoard();
+  buildKeyboard();
+  await loadLists();
+  startNewGame();  // This picks the solution, decoding custom word if any
+})();
+
+newBtn.onclick = startNewGame;
+
 </script>
 </body>
 </html>
